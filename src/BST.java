@@ -23,18 +23,29 @@
      * Fügt einen neuen Knoten mit dem gegebenen key in den BST ein.
      * BST-Eigenschaft: linke Kinder < Parent < rechte Kinder
      * Keine Duplikate erlaubt.
+     * 
+     * Bisheriger Fehler: root == null hat null zurückgegeben → Baum blieb leer.
+     * Bisheriger Fehler: Rekursive Ergebnisse wurden keinen Kinder-Referenzen zugewiesen.
+     * Bisheriger Fehler: Duplikate wurden nicht explizit abgefangen.
      */
     public static BSTNode insert(BSTNode root, int key) {
-        if (root == null){
-            return null;
+        // Neuer Knoten — hier wird die Rekursion gestoppt und ein Knoten erstellt
+        if (root == null) {
+            return new BSTNode(key);  // Vorher: return null → kein Knoten erstellt
         }
-        if (key < root.key){
-            return insert(root.left, key);
+        // Duplikat — nicht erlaubt in BST
+        if (key == root.key) {
+            return root;
         }
-        if (key > root.key) {
-            return insert(root.right, key);
+        // Kleiner als aktueller Key → nach links
+        if (key < root.key) {
+            root.left = insert(root.left, key);  // Vorher: Ergebnis nicht zugewiesen → Knoten verloren
         }
-        return null;
+        // Größer als aktueller Key → nach rechts
+        else {
+            root.right = insert(root.right, key);  // Vorher: Ergebnis nicht zugewiesen → Knoten verloren
+        }
+        return root;  // Original-Wurzel (mit evtl. neuem Kind) zurückgeben
     }
 
     // ============================================================
@@ -43,18 +54,24 @@
 
     /**
      * Prüft, ob ein key im BST vorhanden ist.
+     * 
+     * Bisheriger Fehler: Blatt-Knoten wurden pauschal als "nicht gefunden" markiert.
+     * Bisheriger Fehler: Suchrichtung war vertauscht — kleinerer Key ging nach rechts.
      */
     public static boolean contains(BSTNode root, int key) {
-        if (root == null){return false;}
-        if (root.left == null && root.right == null){
+        if (root == null) {
             return false;
         }
-        if (root.key == key){return true;}
-        if (root.key < key){
-            return contains(root.left, key);
+        // Treffer — muss VOR dem Blatt-Check kommen
+        if (root.key == key) {
+            return true;
         }
-        return contains(root.right, key);
-
+        // Vorher: root.left → falsch, Key ist größer als root.key → nach rechts
+        if (key < root.key) {
+            return contains(root.left, key);
+        } else {
+            return contains(root.right, key);
+        }
     }
 
     // ============================================================
@@ -79,32 +96,47 @@
      * Fall 2: Ein Kind → Kind rückt nach
      * Fall 3: Zwei Kinder → symmetrischer Vorgänger (Maximum des linken Teilbaums)
      *         ersetzen, dann Vorgänger löschen (fällt auf Fall 1 oder 2)
+     * 
+     * Bisheriger Fehler: Nur Key-Werte überschrieben, aber Baumstruktur (Zeiger) nicht verändert.
+     * Bisheriger Fehler: Keine rekursive Suche nach dem zu löschenden Knoten.
+     * Bisheriger Fehler: Alle Fälle wurden parallel mit if geprüft statt exklusiv.
      */
     public static BSTNode delete(BSTNode root, int key) {
-        if (root == null){
+        // BST-Suche: Zum zu löschenden Knoten wandern
+        if (root == null) {
             return null;
         }
-        if (root.left == null && root.right == null){
-            root.key = 0;
+        if (key < root.key) {
+            root.left = delete(root.left, key);  // Vorher: Ergebnis nicht zugewiesen
+            return root;
+        } else if (key > root.key) {
+            root.right = delete(root.right, key);  // Vorher: Ergebnis nicht zugewiesen
+            return root;
         }
-        if (root.left != null && root.right != null){
-            root.key = findMax(root.left);
+        
+        // === Key gefunden — jetzt Fallunterscheidung ===
+        
+        // Fall 1: Blatt (kein linkes, kein rechtes Kind)
+        if (root.left == null && root.right == null) {
+            return null;  // Vorher: root.key = 0 → Key nur gelöscht, Knoten blieb im Baum
         }
-        if (root.left != null && root.right == null){
-            root.key = root.left.key;
+        
+        // Fall 2a: Nur linkes Kind
+        if (root.left != null && root.right == null) {
+            return root.left;  // Vorher: root.key = root.left.key → alter Knoten blieb erhalten
         }
-        if (root.left == null && root.right != null){
-            root.key = root.right.key;
+        
+        // Fall 2b: Nur rechtes Kind
+        if (root.left == null && root.right != null) {
+            return root.right;  // Vorher: root.key = root.right.key → alter Knoten blieb erhalten
         }
-        if (key < root.key){
-            assert root.left != null;
-            return delete(root.left, key);
-        }
-        if (key > root.key){
-            assert root.right != null;
-            return delete(root.right, key);
-        }
-        return null;
+        
+        // Fall 3: Beide Kinder vorhanden
+        // Symmetrischen Vorgänger finden (Maximum des linken Teilbaums)
+        int predecessorKey = findMax(root.left);
+        root.key = predecessorKey;  // Key ersetzen
+        root.left = delete(root.left, predecessorKey);  // Vorgänger-Knoten löschen (fällt auf Fall 1 oder 2)
+        return root;
     }
 
     // ============================================================
@@ -134,11 +166,13 @@
 
     /**
      * Post-Order: Links → Rechts → Eltern
+     * 
+     * Bisheriger Fehler: preOrder() statt postOrder() aufgerufen.
      */
     public static void postOrder(BSTNode node) {
-        if (node == null){return;}
-        preOrder(node.left);
-        preOrder(node.right);
+        if (node == null) { return; }
+        postOrder(node.left);    // Vorher: preOrder(node.left)
+        postOrder(node.right);   // Vorher: preOrder(node.right)
         System.out.println("Key: " + node.key);
     }
 
