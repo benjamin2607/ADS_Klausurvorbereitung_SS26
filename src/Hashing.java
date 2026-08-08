@@ -9,10 +9,10 @@ public class Hashing {
 
     /**
      * Hash-Tabelle mit offener Adressierung und linearer Sondierung.
-     * 
+     *
      * Prinzip: Bei Kollision wird die nächste freie Stelle im Array gesucht
      * (g(m) = (h(k) + m) % N).
-     * 
+     *
      * Klausur-Fallstrick: Gelöschte Einträge werden mit DELETE_MARKER markiert,
      * nicht einfach auf null gesetzt — sonst brechen Sondierungsketten ab!
      */
@@ -133,10 +133,10 @@ public class Hashing {
 
     /**
      * Hash-Tabelle mit separater Kettenbildung (Chaining).
-     * 
+     *
      * Prinzip: Jeder Array-Slot verweist auf eine verkettete Liste.
      * Überbelegung (α > 1) ist problemlos möglich.
-     * 
+     *
      * Aufwand:
      * - Erfolgreiche Suche: 1 + α/2 Schritte
      * - Erfolglose Suche: 1 + α Schritte
@@ -274,13 +274,13 @@ public class Hashing {
 
     /**
      * Berechnet einen Hash-Wert für einen String using Horner-Schema.
-     * 
+     *
      * Verhindert arithmetische Überläufe bei langen Zeichenketten,
      * indem nach JEDEM Zeichenschritt modulo gerechnet wird.
-     * 
+     *
      * Formel: h(s) = (s[0]*p^(n-1) + s[1]*p^(n-2) + ... + s[n-1]*p^0) mod m
      * Horner: h = 0; für jedes Zeichen c: h = (h * p + c) mod m
-     * 
+     *
      * Typische Werte: p = 31 (Primzahl), m = 10^9 + 7 (große Primzahl)
      */
     public static class StringHasher {
@@ -303,11 +303,20 @@ public class Hashing {
          * Bei gleichem Hash MUSS noch char-vor-Char-Vergleich erfolgen!
          */
         public static boolean fastEquals(String a, String b) {
-            // TODO: Implementiere Hash-basierten Vorfilter
-            // 1. Länge prüfen
-            // 2. Hashes vergleichen
-            // 3. Bei Hash-Gleichheit: exakter Zeichenvergleich
-            return false;
+            if (a.length() != b.length()){
+                return false;
+            }
+            a_charArray = a.toCharArray();
+            b_charArray = b.toCharArray();
+
+            if (hash(a) == hash(b)){
+                for (int i=0; i < a_charArray.length(); i++){
+                    if (a_charArray[i] != b_charArray[i]){
+                        return false;
+                    }
+                }
+                return true;
+            }
         }
     }
 
