@@ -42,15 +42,35 @@ public class Hashing {
             return key % capacity;
         }
 
+        private void resize(){
+            this.capacity = 2 * this.capacity; // Double the capacity
+            int[] res = new int[this.capacity];
+            for (int i=0; i < this.capacity; i++){
+                if (this.table[i] != null){
+                    res[i] = this.table[i]
+                }
+                res[i] = EMPTY;
+            }
+            this.table = res;
+        }
+
         /**
          * Fügt einen key ein. Bei Kollision: lineare Sondierung.
          * Resizing wenn Load Factor > Threshold.
          */
         public void insert(int key) {
-            // TODO: Implementiere lineare Sondierung
-            // Hinweis: Bei Kollision (table[pos] != EMPTY && table[pos] != DELETE_MARKER)
-            // weiterzählen mit pos = (pos + 1) % capacity
-            // ACHTUNG: DELETE_MARKER zählt als belegt für die Sondierungskette!
+            int retries = 1; // Anzahl der neuen Versuche
+            if (this.size == this.capacity){ // Tabelle resizen, wenn kein Platz mehr ist
+                resize();
+            }
+            if (this.table[hash(key)] == EMPTY && this.table[hash(key)] != DELETE_MARKER){
+                this.table[hash(key)] = key; // Wenn es frei ist
+            }
+            while (this.table[hash(key + retries)] != EMPTY){
+                retries++; // Es wird solange der Index erhöht bis es ein freies Element gibt
+            }
+            this.table[hash(key + retries)] = key; // Wenn der hashed_key auf ein leeres Element zeigt -> key am Index einfügen
+
         }
 
         /**
@@ -61,6 +81,14 @@ public class Hashing {
             // TODO: Implementiere Suche mit linearer Sondierung
             // WICHTIG: Endlosschleife vermeiden! Abbruch wenn EMPTY getroffen.
             // DELETE_MARKER überspringen und weiter suchen.
+            for (int i=0; i < this.capacity; i++){
+                if (this.table[i] == key){
+                    return i;
+                }
+                if (this.table[i] == EMPTY){
+                    return -1;
+                }
+            }
             return -1;
         }
 
@@ -70,8 +98,8 @@ public class Hashing {
          * aber NICHT "frei für Sondierungsketten" — Suchen müssen trotzdem weiterlaufen.
          */
         public void delete(int key) {
-            // TODO: Implementiere Löschung mit Tombstone
-            // Finde key via search, setze table[pos] = DELETE_MARKER
+            int pos = search(key);
+            this.table[pos] = DELETE_MARKER;
         }
 
         public int size() { return size; }
@@ -143,16 +171,49 @@ public class Hashing {
          * Fügt einen key ein (am Anfang der Kette).
          */
         public void insert(int key) {
-            // TODO: Implementiere Chaining-Insert
-            // Berechne bucket index, hänge neuen Node an den Anfang der Liste
+            // 1. Index im Array berechnen (inkl. Absicherung für negative Keys)
+            int index = hash(key);
+            if (index < 0) {
+                index += capacity;
+            }
+
+            // Optional: Prüfen, ob der Schlüssel bereits existiert (falls Duplikate vermieden werden sollen)
+            Node current = buckets[index];
+            while (current != null) {
+                if (current.key == key) {
+                    return; // Schlüssel existiert schon, Abbruch
+                }
+                current = current.next;
+            }
+
+            // 2. Neuen Knoten erzeugen
+            Node newNode = new Node(key);
+
+            // 3. Am Anfang der verketteten Liste einfügen (O(1))
+            newNode.next = buckets[index]; // Der neue Knoten zeigt auf das bisherige erste Element
+            buckets[index] = newNode;     // Das Ziel-Bucket zeigt jetzt auf den neuen Knoten
+
+            // 4. Elementanzahl erhöhen
+            size++;
         }
 
         /**
          * Sucht einen key in der entsprechenden Kette.
          */
         public boolean contains(int key) {
-            // TODO: Implementiere Chaining-Search
-            // Berechne bucket index, durchlaufe Kette linear
+            int index = hash(key);
+            if (index < 0){
+                index += capacity;
+            }
+
+            Node current = buckets[index];
+
+            while (current != null){
+                if (current.key == key){
+                    return true;
+                }
+                current = current.next;
+            }
             return false;
         }
 
@@ -161,8 +222,31 @@ public class Hashing {
          * ACHTUNG: Sonderfall — zu löschender Knoten ist der Kopf der Kette!
          */
         public void delete(int key) {
-            // TODO: Implementiere Chaining-Delete
-            // Finde Knoten in Kette, biete Zeiger des Vorgängers
+            int index = hash(key);
+            if (index < 0) index += capacity; // Negativ-Schutz für Java-Modulo
+
+            Node current = buckets[index];
+            Node prev = null; // Speichert den vorherigen Knoten
+
+            while (current != null) { // Liste durchlaufen bis zum Ende
+                if (current.key == key) { // Match gefunden!
+
+                    if (prev == null) {
+                        // Sonderfall: Element ist der Kopf -> Bucket zeigt direkt auf Nachfolger
+                        buckets[index] = current.next;
+                    } else {
+                        // Normalfall: Element liegt mitten/am Ende -> Vorgänger überspringt current
+                        prev.next = current.next;
+                    }
+
+                    size--; // Elementanzahl verringern
+                    return; // Löschen abgeschlossen, Abbrechen
+                }
+
+                // Schritt weitergehen: current wird zu prev, current rückt eins vor
+                prev = current;
+                current = current.next;
+            }
         }
 
         public int size() { return size; }
@@ -207,9 +291,10 @@ public class Hashing {
          * Berechnet den Hash eines Strings.
          */
         public static int hash(String s) {
-            // TODO: Implementiere Horner-Schema
-            // for (char c : s.toCharArray()) { hash = (hash * BASE + c) % MODULUS; }
-            return 0;
+            for (char c : s.toCharArray()) {
+                hash = (hash * BASE + c) % MODULUS;
+            }
+            return hash;
         }
 
         /**
